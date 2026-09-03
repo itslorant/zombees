@@ -54,15 +54,28 @@ export class Pickups {
       // boss reward always lands; trim clutter to make room
       while (this.weapons.length >= 3) this._despawnWeapon(0);
       const t = maxTierFor(wave);
-      this._lastWeaponTier = t;
-      this._spawnWeapon(pos, t, 8, target);
+      if (t === currentTier) {
+        // already holding the best gun for this wave — hand over two mods
+        this._spawnMod(pos);
+        this._spawnMod({ x: pos.x + 1.5, z: pos.z });
+      } else {
+        this._lastWeaponTier = t;
+        this._spawnWeapon(pos, t, 8, target);
+      }
       return;
     }
-    // never litter the field with more than a couple of guns at once
-    if (this.weapons.length >= 2) return;
     const r = Math.random();
-    if (r < 0.08) this._spawnWeapon(pos, this._pickTier(currentTier, wave), 6, target);
-    else if (r < 0.19) this._spawnMod(pos);
+    if (r < 0.08) {
+      // never litter the field with more than a couple of guns at once
+      if (this.weapons.length >= 2) return;
+      const t = this._pickTier(currentTier, wave);
+      // a "spare" of the gun you're already holding does nothing — hand over a
+      // stat crate instead. Weapon drops always mean a real gun change.
+      if (t === currentTier) this._spawnMod(pos);
+      else this._spawnWeapon(pos, t, 6, target);
+    } else if (r < 0.19) {
+      this._spawnMod(pos);
+    }
   }
 
   _despawnWeapon(i) {
