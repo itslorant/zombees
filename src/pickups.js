@@ -39,12 +39,21 @@ export class Pickups {
 
   maybeDrop(pos, boss, wave, currentTier) {
     if (boss) {
-      this._spawnWeapon(pos, maxTierFor(wave), 15);
+      // boss reward always lands; trim clutter to make room
+      while (this.weapons.length >= 3) this._despawnWeapon(0);
+      this._spawnWeapon(pos, maxTierFor(wave), 12);
       return;
     }
+    // never litter the field with more than a couple of guns at once
+    if (this.weapons.length >= 2) return;
     const r = Math.random();
-    if (r < 0.08) this._spawnWeapon(pos, rollWeaponTier(currentTier, wave), 9);
+    if (r < 0.08) this._spawnWeapon(pos, rollWeaponTier(currentTier, wave), 6.5);
     else if (r < 0.19) this._spawnMod(pos);
+  }
+
+  _despawnWeapon(i) {
+    this.scene.remove(this.weapons[i].mesh);
+    this.weapons.splice(i, 1);
   }
 
   _spawnMod(pos) {
@@ -107,9 +116,10 @@ export class Pickups {
       g.userData.ring.rotation.z += dt * 1.6;
       g.userData.ring.scale.setScalar(1 + Math.sin(d.t * 4) * 0.07);
 
-      // it stays where it landed — reaching it is your call. Only a touch of
-      // downfield drift so a drop just behind a kill still comes into range.
-      g.position.z += 0.8 * dt;
+      // drifts toward you — slower than a stat crate, and you can still
+      // sidestep one you don't want — but a gun you DO want comes to meet you
+      g.position.x = lerp(g.position.x, clamp(p.x, -6, 6), dt * 0.9);
+      g.position.z += 3 * dt;
 
       const fade = d.life < 2 ? clamp(d.life / 2, 0, 1) : 1;
       for (const f of g.userData.fadeMats) f.m.opacity = f.base * fade;

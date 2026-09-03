@@ -8,8 +8,8 @@ export const WEAPONS = [
   { name: "Pistol", fireInterval: 0.42, damage: 10, pellets: 1, spread: 0.02, speed: 62, pierce: 0, color: 0xffe066 },
   { name: "SMG", fireInterval: 0.11, damage: 6, pellets: 1, spread: 0.06, speed: 70, pierce: 0, color: 0xffd166 },
   { name: "Shotgun", fireInterval: 0.75, damage: 6, pellets: 7, spread: 0.36, speed: 58, pierce: 0, color: 0xffb84d },
-  { name: "Minigun", fireInterval: 0.06, damage: 4, pellets: 1, spread: 0.12, speed: 78, pierce: 0, color: 0xfff0a0 },
-  { name: "Plasma", fireInterval: 0.24, damage: 15, pellets: 1, spread: 0.035, speed: 92, pierce: 1, color: 0x5ef0ff },
+  { name: "Minigun", fireInterval: 0.065, damage: 4, pellets: 1, spread: 0.12, speed: 78, pierce: 0, color: 0xfff0a0 },
+  { name: "Plasma", fireInterval: 0.22, damage: 19, pellets: 1, spread: 0.02, speed: 96, pierce: 2, color: 0x5ef0ff },
 ];
 
 const _muzzle = new THREE.Vector3();
