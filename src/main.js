@@ -208,7 +208,7 @@ function onKill(e) {
     }
   }
 
-  pickups.maybeDrop(e.group.position, e.isBoss, waves.wave, weapon.tier);
+  pickups.maybeDrop(e.group.position, e.isBoss, waves.wave, weapon.tier, player.group.position);
 }
 
 // ---------------------------------------------------------------------------

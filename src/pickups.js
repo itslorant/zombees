@@ -22,10 +22,10 @@ function rollWeaponTier(current, wave) {
   const cap = maxTierFor(wave);
   const r = Math.random();
   let t;
-  if (r < 0.5) t = current + 1;
-  else if (r < 0.7) t = current + 2;
-  else if (r < 0.85) t = current;
-  else t = (Math.random() * WEAPONS.length) | 0;
+  if (r < 0.52) t = current + 1;
+  else if (r < 0.74) t = current + 2;
+  else if (r < 0.9) t = current;
+  else t = (Math.random() * WEAPONS.length) | 0; // wildcard — can be below you
   return clamp(t, 0, Math.max(current, cap));
 }
 
@@ -37,17 +37,17 @@ export class Pickups {
     this.weapons = [];
   }
 
-  maybeDrop(pos, boss, wave, currentTier) {
+  maybeDrop(pos, boss, wave, currentTier, target) {
     if (boss) {
       // boss reward always lands; trim clutter to make room
       while (this.weapons.length >= 3) this._despawnWeapon(0);
-      this._spawnWeapon(pos, maxTierFor(wave), 12);
+      this._spawnWeapon(pos, maxTierFor(wave), 8, target);
       return;
     }
     // never litter the field with more than a couple of guns at once
     if (this.weapons.length >= 2) return;
     const r = Math.random();
-    if (r < 0.08) this._spawnWeapon(pos, rollWeaponTier(currentTier, wave), 6.5);
+    if (r < 0.08) this._spawnWeapon(pos, rollWeaponTier(currentTier, wave), 6, target);
     else if (r < 0.19) this._spawnMod(pos);
   }
 
@@ -65,13 +65,27 @@ export class Pickups {
     this.mods.push({ mesh, type, t: 0 });
   }
 
-  _spawnWeapon(pos, tier, life) {
+  _spawnWeapon(pos, tier, life, target) {
     const w = WEAPONS[tier];
     const mesh = makeWeaponDrop(w.name, w.color, tier);
-    mesh.position.set(clamp(pos.x, -6, 6), 0, pos.z);
+    const sx = clamp(pos.x, -8, 8);
+    mesh.position.set(sx, 0, pos.z);
     addBlobShadow(mesh, 1.9);
     this.scene.add(mesh);
-    this.weapons.push({ mesh, tier, name: w.name, color: w.color, t: 0, life });
+    // locked straight-line heading toward where the player was — fast enough to
+    // reach you, but it won't track, so you can sidestep one you don't want
+    let dx = (target ? target.x : 0) - sx;
+    let dz = (target ? target.z : PLAYER_Z) - pos.z;
+    const len = Math.hypot(dx, dz) || 1;
+    this.weapons.push({
+      mesh,
+      tier,
+      name: w.name,
+      color: w.color,
+      t: 0,
+      life,
+      dir: { x: dx / len, z: dz / len },
+    });
   }
 
   update(dt, player, weapon, hud) {
@@ -116,16 +130,21 @@ export class Pickups {
       g.userData.ring.rotation.z += dt * 1.6;
       g.userData.ring.scale.setScalar(1 + Math.sin(d.t * 4) * 0.07);
 
-      // drifts toward you — slower than a stat crate, and you can still
-      // sidestep one you don't want — but a gun you DO want comes to meet you
-      g.position.x = lerp(g.position.x, clamp(p.x, -6, 6), dt * 0.9);
-      g.position.z += 3 * dt;
+      // straight line, rusher-ish speed. It won't turn to follow you — step
+      // into its path to take it, step out of it to keep what you've got.
+      const SPEED = 8.5;
+      g.position.x += d.dir.x * SPEED * dt;
+      g.position.z += d.dir.z * SPEED * dt;
 
       const fade = d.life < 2 ? clamp(d.life / 2, 0, 1) : 1;
       for (const f of g.userData.fadeMats) f.m.opacity = f.base * fade;
       if (d.life < 1) g.scale.setScalar(0.85 + 0.15 * fade);
 
-      if (d.life <= 0 || g.position.z > PLAYER_Z + 8) {
+      if (
+        d.life <= 0 ||
+        g.position.z > PLAYER_Z + 6 ||
+        Math.abs(g.position.x) > 13
+      ) {
         this.scene.remove(g);
         this.weapons.splice(i, 1);
         continue;
