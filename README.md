@@ -27,9 +27,12 @@ Build a static bundle with `npm run build` (output in `dist/`), preview it with
   lob venom), **splitters** (pop into two on death), **tanks** (huge, armoured,
   slow). Every **5th wave** drops the **Queen Zombee** boss — she charges,
   summons broodlings, and enrages below 30% health (bar up top).
-- **Weapon crates** drop from kills and every boss. Grab them to climb the gun
-  ladder — Pistol → SMG → Shotgun → Minigun → Plasma — or stack capped
-  fire-rate / damage / pierce modifiers.
+- **Weapon drops** are labeled and opt-in: the gun spins in a light beam with
+  its name and tier pips, sitting where it fell. Walk into it to take it, or
+  leave it. Any tier can drop (higher ones weighted in as waves climb) — even
+  one below what you're holding, if you want it. Every boss leaves one.
+- **Stat mods** (fire-rate / damage / pierce, all capped) are small crates that
+  home in and auto-grab — no reason to refuse those.
 - **Chain kills** for a score multiplier (up to 6×); taking a hit resets it.
 - Contact with a Zombee hurts. At 0 health you're stung to death — press `R` or
   the button to try again. It's a score run: your best score and wave are saved.
@@ -46,7 +49,7 @@ Build a static bundle with `npm run build` (output in `dist/`), preview it with
 | `src/enemies.js` | Zombee archetypes, crescent swarm, venom spit, boss state machine (charge / summon / enrage) |
 | `src/difficulty.js` | The single intensity curve + per-archetype mods and the spawn-mix roll |
 | `src/waves.js` | Continuous swarm director; wave timer; boss cadence |
-| `src/pickups.js` | Weapon-crate drops and collection |
+| `src/pickups.js` | Opt-in labeled weapon drops + auto-grab stat-mod crates |
 | `src/progress.js` | Best score / wave, persisted to localStorage |
 | `src/effects.js` | Muzzle flashes, sparks, shockwave rings |
 | `src/environment.js` | Scrolling road + recycled roadside props |

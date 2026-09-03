@@ -103,13 +103,13 @@ export function createWeapon(player, bullets, effects, onShoot = () => {}) {
       equip(0);
     },
 
-    upgradeTier() {
-      if (tier < WEAPONS.length - 1) {
-        equip(tier + 1);
-        return WEAPONS[tier].name + "!";
-      }
-      mods.damage = Math.min(2.6, mods.damage + 0.2);
-      return "Overcharge DMG";
+    // swap to a specific weapon (drops are opt-in and can be any tier —
+    // stat mods stay global on "your gun")
+    switchTo(i) {
+      i = clamp(i, 0, WEAPONS.length - 1);
+      if (i === tier) return null;
+      equip(i);
+      return WEAPONS[i].name;
     },
 
     addMod(type) {

@@ -403,6 +403,108 @@ export function makeCrate(type) {
 }
 
 // ---------------------------------------------------------------------------
+// Weapon drop — a named, opt-in pickup: the real gun spinning in a light
+// beam with a billboard label + tier pips. You choose whether to grab it.
+// ---------------------------------------------------------------------------
+const hex = (n) => "#" + n.toString(16).padStart(6, "0");
+const weaponLabelCache = {};
+
+function weaponLabelTexture(name, color, tier) {
+  const key = name + tier;
+  if (weaponLabelCache[key]) return weaponLabelCache[key];
+  const c = document.createElement("canvas");
+  c.width = 340;
+  c.height = 150;
+  const g = c.getContext("2d");
+  const x = 8;
+  const y = 14;
+  const w = 324;
+  const h = 78;
+  const r = 14;
+  g.fillStyle = "rgba(6,12,8,0.62)";
+  g.beginPath();
+  g.moveTo(x + r, y);
+  g.arcTo(x + w, y, x + w, y + h, r);
+  g.arcTo(x + w, y + h, x, y + h, r);
+  g.arcTo(x, y + h, x, y, r);
+  g.arcTo(x, y, x + w, y, r);
+  g.closePath();
+  g.fill();
+
+  g.textAlign = "center";
+  g.textBaseline = "middle";
+  g.font = "bold 46px 'Trebuchet MS', Segoe UI, sans-serif";
+  g.fillStyle = hex(color);
+  g.fillText(name.toUpperCase(), 170, 44);
+
+  g.font = "26px 'Trebuchet MS', sans-serif";
+  let pips = "";
+  for (let i = 0; i < 5; i++) pips += i <= tier ? "◆ " : "◇ ";
+  g.fillStyle = "#dfeecd";
+  g.fillText(pips.trim(), 170, 108);
+
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  weaponLabelCache[key] = tex;
+  return tex;
+}
+
+export function makeWeaponDrop(name, color, tier) {
+  const g = new THREE.Group();
+
+  const beam = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.55, 0.55, 6, 14, 1, true),
+    new THREE.MeshBasicMaterial({
+      color,
+      transparent: true,
+      opacity: 0.13,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+    }),
+  );
+  beam.position.y = 3;
+  g.add(beam);
+
+  const ring = new THREE.Mesh(
+    new THREE.TorusGeometry(0.95, 0.055, 8, 30),
+    new THREE.MeshBasicMaterial({ color, transparent: true }),
+  );
+  ring.rotation.x = Math.PI / 2;
+  ring.position.y = 0.06;
+  g.add(ring);
+
+  const gun = GUN_BUILDERS[name]();
+  gun.scale.setScalar(2.1);
+  gun.position.y = 1.5;
+  gun.rotation.y = 0.5;
+  g.add(gun);
+
+  const label = new THREE.Sprite(
+    new THREE.SpriteMaterial({
+      map: weaponLabelTexture(name, color, tier),
+      transparent: true,
+      depthWrite: false,
+      depthTest: false,
+    }),
+  );
+  label.scale.set(3.6, 1.6, 1);
+  label.position.y = 3.1;
+  label.renderOrder = 999;
+  g.add(label);
+
+  g.userData = {
+    gun,
+    ring,
+    fadeMats: [
+      { m: beam.material, base: 0.13 },
+      { m: ring.material, base: 1 },
+      { m: label.material, base: 1 },
+    ],
+  };
+  return g;
+}
+
+// ---------------------------------------------------------------------------
 // Environment props (recycled along the roadside)
 // ---------------------------------------------------------------------------
 export function makeProp(kind) {
