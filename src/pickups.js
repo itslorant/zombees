@@ -35,19 +35,33 @@ export class Pickups {
     this.effects = effects;
     this.mods = [];
     this.weapons = [];
+    this._lastWeaponTier = -1;
+  }
+
+  // roll a weapon tier, rerolling a couple of times to avoid offering the same
+  // gun over and over
+  _pickTier(currentTier, wave) {
+    let t = rollWeaponTier(currentTier, wave);
+    for (let i = 0; i < 2 && t === this._lastWeaponTier; i++) {
+      t = rollWeaponTier(currentTier, wave);
+    }
+    this._lastWeaponTier = t;
+    return t;
   }
 
   maybeDrop(pos, boss, wave, currentTier, target) {
     if (boss) {
       // boss reward always lands; trim clutter to make room
       while (this.weapons.length >= 3) this._despawnWeapon(0);
-      this._spawnWeapon(pos, maxTierFor(wave), 8, target);
+      const t = maxTierFor(wave);
+      this._lastWeaponTier = t;
+      this._spawnWeapon(pos, t, 8, target);
       return;
     }
     // never litter the field with more than a couple of guns at once
     if (this.weapons.length >= 2) return;
     const r = Math.random();
-    if (r < 0.08) this._spawnWeapon(pos, rollWeaponTier(currentTier, wave), 6, target);
+    if (r < 0.08) this._spawnWeapon(pos, this._pickTier(currentTier, wave), 6, target);
     else if (r < 0.19) this._spawnMod(pos);
   }
 
@@ -168,5 +182,6 @@ export class Pickups {
     for (const d of this.weapons) this.scene.remove(d.mesh);
     this.mods.length = 0;
     this.weapons.length = 0;
+    this._lastWeaponTier = -1;
   }
 }
