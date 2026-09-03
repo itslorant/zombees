@@ -21,6 +21,7 @@ export function createWeapon(player, bullets, effects, onShoot = () => {}) {
   let mesh = null;
   const mods = { fireRate: 1, damage: 1, pierce: 0 };
   let cooldown = 0;
+  let lastTarget = null;
 
   function equip(t) {
     tier = clamp(t, 0, WEAPONS.length - 1);
@@ -32,30 +33,38 @@ export function createWeapon(player, bullets, effects, onShoot = () => {}) {
 
   equip(0);
 
-  // The soldier fires into a forward cone, not a 360° turret. Enemies out to
-  // the side stay unengaged until they close or curve in — so a stationary
-  // player really can be flanked and overrun.
-  const CONE = Math.cos(0.82); // ~47 degrees off dead-ahead
+  // The soldier fires into a wide cone centred on where he's facing (which
+  // swings with your strafe — movement is aiming). Two extra rules keep it fair:
+  //  - anything inside CLOSE_R is always a valid target, cone or not, so a bee
+  //    right on top of you always gets shot;
+  //  - far enemies outside the cone stay unengaged, so splitting the swarm
+  //    across both flanks still overwhelms a single gun.
+  const CONE_HALF = 1.15; // ~66 degrees each side of facing
+  const CLOSE_SQ = 5.5 * 5.5;
+
+  const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
 
   function nearestTarget(from, enemies) {
     let best = null;
     let bestD = Infinity;
     let boss = null;
-    let bossD = Infinity;
     let closestGrunt = Infinity;
     const pz = player.group.position.z;
     const px = player.group.position.x;
+    const facing = player.facing || 0;
     for (const e of enemies) {
       const ep = e.group.position;
-      if (e.dead || ep.z > pz + 2) continue;
+      if (e.dead || ep.z > pz + 6) continue;
       const vx = ep.x - px;
-      const vz = ep.z - pz; // forward is -z
-      const len = Math.hypot(vx, vz) || 1;
-      if (!e.isBoss && -vz / len < CONE) continue; // outside the firing cone
+      const vz = ep.z - pz;
+      const dsq = vx * vx + vz * vz;
+      if (!e.isBoss && dsq > CLOSE_SQ) {
+        const ang = Math.atan2(vx, -vz); // 0 = straight ahead, + = toward +x
+        if (Math.abs(wrap(ang - facing)) > CONE_HALF) continue;
+      }
       const d = _tmp.copy(ep).sub(from).lengthSq();
       if (e.isBoss) {
         boss = e;
-        bossD = d;
         continue;
       }
       if (d < closestGrunt) closestGrunt = d;
@@ -72,6 +81,9 @@ export function createWeapon(player, bullets, effects, onShoot = () => {}) {
   return {
     get def() {
       return WEAPONS[tier];
+    },
+    get target() {
+      return lastTarget;
     },
     get tier() {
       return tier;
@@ -123,6 +135,7 @@ export function createWeapon(player, bullets, effects, onShoot = () => {}) {
       player.hand.getWorldPosition(_muzzle);
 
       const target = nearestTarget(_muzzle, enemies);
+      lastTarget = target;
       player.aimAt(target ? target.group.position : null);
 
       if (mesh.userData.spin) mesh.userData.spin.rotation.z += dt * (cooldown < 0 ? 40 : 6);

@@ -21,11 +21,13 @@ export function createPlayer(scene) {
     speed: 13,
     invuln: 0,
     walkT: 0,
+    facing: 0, // aim yaw: 0 = straight ahead, + = toward +x. weapons fire into a cone around this
     _aimYaw: 0,
 
     reset() {
       this.health = this.maxHealth;
       this.invuln = 0;
+      this.facing = 0;
       group.position.set(0, 0, PLAYER_Z);
       group.rotation.set(0, 0, 0);
     },
@@ -58,11 +60,18 @@ export function createPlayer(scene) {
 
       group.position.x = clamp(group.position.x + vx * dt, -input.laneHalf, input.laneHalf);
 
-      // face roughly forward, leaning toward the aim target
-      group.rotation.y = lerp(group.rotation.y, this._aimYaw * 0.5, 0.2);
+      // Aim/facing: while strafing you turn to sweep fire in your movement
+      // direction; standing still you square up to whatever the gun is shooting.
+      const moving = Math.abs(vx) > 0.1;
+      const strafeYaw = clamp(vx / this.speed, -1, 1) * 0.5;
+      // while moving, bias fire toward your direction of travel but keep some
+      // aim on the current threat; standing still, square up to it
+      const wantFacing = moving ? strafeYaw * 0.62 + this._aimYaw * 0.38 : this._aimYaw * 0.9;
+      this.facing = lerp(this.facing, wantFacing, moving ? 0.16 : 0.1);
+      // model yaw is the mirror of the aim yaw (forward is -Z)
+      group.rotation.y = lerp(group.rotation.y, -this.facing, 0.25);
 
       // leg / arm walk cycle
-      const moving = Math.abs(vx) > 0.1;
       this.walkT += dt * (moving ? 12 : 6);
       const swing = Math.sin(this.walkT) * (moving ? 0.6 : 0.05);
       ud.lLeg.rotation.x = swing;
