@@ -15,9 +15,9 @@ export class Pickups {
   }
 
   maybeDrop(pos, boss) {
-    const chance = boss ? 1 : 0.2;
+    const chance = boss ? 1 : 0.12;
     if (Math.random() > chance) return;
-    const type = boss ? "upgrade" : Math.random() < 0.05 ? "upgrade" : pick(MOD_TYPES);
+    const type = boss ? "upgrade" : Math.random() < 0.03 ? "upgrade" : pick(MOD_TYPES);
     const mesh = makeCrate(type);
     mesh.position.set(pos.x, 0.7, pos.z);
     addBlobShadow(mesh, 1.4);
@@ -32,13 +32,13 @@ export class Pickups {
       c.t += dt;
       c.mesh.rotation.y += dt * 1.8;
       c.mesh.position.y = 0.7 + Math.sin(c.t * 3) * 0.12;
-      c.mesh.position.z += 6 * dt; // drift toward the player so misses still get collected
-      c.mesh.position.x = lerp(c.mesh.position.x, p.x, dt * 2.6); // home toward the player
+      c.mesh.position.z += 4.5 * dt; // drift toward the player so near-misses still count
+      c.mesh.position.x = lerp(c.mesh.position.x, p.x, dt * 1.3); // gentle homing
       c.mesh.userData.halo.rotation.z += dt * 2;
 
       const dx = c.mesh.position.x - p.x;
       const dz = c.mesh.position.z - p.z;
-      if (dx * dx + dz * dz < 6.5) {
+      if (dx * dx + dz * dz < 4.2) {
         const msg =
           c.type === "upgrade" ? weapon.upgradeTier() : weapon.addMod(c.type);
         hud.announce(msg, "#ffd23f");

@@ -119,6 +119,64 @@ html, body {
   100% { opacity: 0; transform: translate(-50%, -18px) scale(1.03); }
 }
 
+.best-line { margin-top: 6px; font-size: 11px; color: #7fa876; letter-spacing: 0.08em; }
+
+/* combo meter */
+#combo {
+  position: absolute;
+  top: 150px;
+  right: 14px;
+  text-align: right;
+  opacity: 0;
+  transform: translateX(12px);
+  transition: opacity 0.15s, transform 0.15s;
+}
+#combo.show { opacity: 1; transform: none; }
+#combo .combo-x {
+  font-size: 30px;
+  font-weight: 900;
+  color: var(--gold);
+  text-shadow: 0 0 16px rgba(255, 210, 63, 0.5), 0 2px 0 rgba(0, 0, 0, 0.4);
+}
+#combo .combo-mult { font-size: 18px; font-weight: 800; color: #fff; }
+#combo.hot .combo-x { color: #ff7a3a; text-shadow: 0 0 20px rgba(255, 122, 58, 0.7); }
+
+/* floating popups */
+#pop-layer { position: absolute; inset: 0; overflow: hidden; }
+.pop {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  font-weight: 800;
+  font-size: 16px;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.5);
+  animation: pop 0.9s ease-out forwards;
+}
+.pop.score { color: #ffe27a; }
+.pop.big { color: #fff2a0; font-size: 22px; }
+.pop.hurt { color: #ff6b6b; }
+.pop.combo { color: #ff9a3a; font-size: 20px; }
+@keyframes pop {
+  0% { opacity: 0; transform: translate(-50%, -40%) scale(0.7); }
+  15% { opacity: 1; transform: translate(-50%, -60%) scale(1.1); }
+  40% { transform: translate(-50%, -75%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -140%) scale(0.95); }
+}
+
+.best-badge { font-size: 14px; color: var(--gold); letter-spacing: 0.08em; }
+.newbest {
+  font-size: clamp(16px, 3vw, 26px);
+  font-weight: 900;
+  letter-spacing: 0.2em;
+  color: var(--gold);
+  text-shadow: 0 0 24px rgba(255, 210, 63, 0.6);
+  opacity: 0;
+  height: 0;
+}
+.newbest.show { opacity: 1; height: auto; animation: newbest 0.6s ease-out; }
+@keyframes newbest { 0% { transform: scale(0.6); } 60% { transform: scale(1.15); } 100% { transform: scale(1); } }
+
 /* damage vignette */
 #hurt {
   position: absolute;

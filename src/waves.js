@@ -1,6 +1,6 @@
 import { sfx } from "./audio.js";
 import { rand } from "./utils.js";
-import { WAVE_SECONDS, enemyStats, bossStats } from "./difficulty.js";
+import { WAVE_SECONDS, enemyStats, bossStats, rollKind, KIND_MODS } from "./difficulty.js";
 
 // Continuous swarm director. The wave number ticks up on a timer and cranks
 // the difficulty; enemies pour in the whole time. Bosses drop in on wave 5,
@@ -27,14 +27,15 @@ export function createWaves(enemies, hud) {
   }
 
   function spawnGrunt() {
-    const rusher = Math.random() < stats.rusherChance;
+    const kind = rollKind(wave);
+    const m = KIND_MODS[kind];
     enemies.spawn({
       x: rand(-9, 9),
       z: stats.spawnZ(),
-      speed: stats.speed * (rusher ? 1.85 : 1) + rand(0, 1.2),
-      hp: Math.round(stats.hp * (rusher ? 0.55 : 1)),
-      dmg: stats.contactDmg,
-      boss: false,
+      speed: stats.speed * m.speed + rand(0, 1.2),
+      hp: Math.max(6, Math.round(stats.hp * m.hp)),
+      dmg: Math.round(stats.contactDmg * m.dmg),
+      kind,
     });
   }
 
@@ -77,7 +78,7 @@ export function createWaves(enemies, hud) {
           hp: b.hp,
           dmg: b.contactDmg,
           chargeDmg: b.chargeDmg,
-          boss: true,
+          kind: "boss",
         });
       }
 

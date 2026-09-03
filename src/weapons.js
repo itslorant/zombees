@@ -16,7 +16,7 @@ const _muzzle = new THREE.Vector3();
 const _aim = new THREE.Vector3();
 const _tmp = new THREE.Vector3();
 
-export function createWeapon(player, bullets, effects) {
+export function createWeapon(player, bullets, effects, onShoot = () => {}) {
   let tier = 0;
   let mesh = null;
   const mods = { fireRate: 1, damage: 1, pierce: 0 };
@@ -40,6 +40,9 @@ export function createWeapon(player, bullets, effects) {
   function nearestTarget(from, enemies) {
     let best = null;
     let bestD = Infinity;
+    let boss = null;
+    let bossD = Infinity;
+    let closestGrunt = Infinity;
     const pz = player.group.position.z;
     const px = player.group.position.x;
     for (const e of enemies) {
@@ -48,16 +51,22 @@ export function createWeapon(player, bullets, effects) {
       const vx = ep.x - px;
       const vz = ep.z - pz; // forward is -z
       const len = Math.hypot(vx, vz) || 1;
-      const forwardDot = -vz / len;
-      if (!e.isBoss && forwardDot < CONE) continue; // outside the firing cone
-      let d = _tmp.copy(ep).sub(from).lengthSq();
-      if (e.isBoss) d *= 0.35; // bias fire toward the boss so she actually goes down
+      if (!e.isBoss && -vz / len < CONE) continue; // outside the firing cone
+      const d = _tmp.copy(ep).sub(from).lengthSq();
+      if (e.isBoss) {
+        boss = e;
+        bossD = d;
+        continue;
+      }
+      if (d < closestGrunt) closestGrunt = d;
       if (d < bestD) {
         bestD = d;
         best = e;
       }
     }
-    return best;
+    // shoot the boss only when no grunt is breathing down your neck
+    if (boss && closestGrunt > 7 * 7) return boss;
+    return best || boss;
   }
 
   return {
@@ -138,6 +147,7 @@ export function createWeapon(player, bullets, effects) {
 
       effects.muzzleFlash(_muzzle, def.color);
       sfx.shoot();
+      onShoot(_muzzle, def.color);
     },
   };
 }

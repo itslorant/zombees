@@ -36,10 +36,38 @@ export function enemyStats(n) {
     // enemies per second poured onto the field.
     spawnRate: 0.5 + I * 2.3 + tail * 0.3,
     spawnZ: () => -(30 - clamp(I, 0, 1) * 13) - Math.random() * 5,
-    rusherChance: clamp((I - 0.4) * 0.5, 0, 0.42),
     // how many spawn together when the budget ticks over
     clump: I < 0.45 ? 1 : I < 0.9 ? 2 : 3,
   };
+}
+
+// Per-archetype multipliers on the base grunt stats.
+export const KIND_MODS = {
+  grunt: { hp: 1, speed: 1, dmg: 1 },
+  rusher: { hp: 0.5, speed: 1.9, dmg: 1 },
+  spitter: { hp: 0.85, speed: 0.8, dmg: 0 },
+  tank: { hp: 4.6, speed: 0.55, dmg: 2.3 },
+  splitter: { hp: 1.35, speed: 0.9, dmg: 1.1 },
+};
+
+// Weighted archetype roll for the given wave. Warmup is pure grunt; specials
+// fade in as intensity climbs.
+export function rollKind(n) {
+  const I = intensity(n);
+  const bag = [["grunt", 10]];
+  if (I > 0.3) bag.push(["rusher", (I - 0.3) * 14]);
+  if (I > 0.5) bag.push(["splitter", (I - 0.5) * 8]);
+  if (I > 0.55) bag.push(["spitter", (I - 0.55) * 7]);
+  if (I > 0.7) bag.push(["tank", (I - 0.7) * 4]);
+
+  let total = 0;
+  for (const [, w] of bag) total += w;
+  let r = Math.random() * total;
+  for (const [k, w] of bag) {
+    r -= w;
+    if (r <= 0) return k;
+  }
+  return "grunt";
 }
 
 export function bossStats(n) {

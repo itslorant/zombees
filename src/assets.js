@@ -215,27 +215,61 @@ const bossFuzz = mat(0x6b8f2e, { flatShading: true, roughness: 1 });
 const bossStripe = mat(0xc23b2b, { flatShading: true, roughness: 1 });
 const bossEye = mat(0xff1e1e, { emissive: 0xff2200, emissiveIntensity: 1.6 });
 
-export function makeZombee(boss = false) {
+// rusher — lean, orange, aggressive
+const rushFuzz = mat(0xd9622e, { flatShading: true, roughness: 1 });
+const rushStripe = mat(0x2a1410, { flatShading: true });
+// spitter — bloated, sickly, glowing venom sac
+const spitFuzz = mat(0xa7bf3e, { flatShading: true, roughness: 1 });
+const spitSac = mat(0xdcff4a, { emissive: 0xbfff2a, emissiveIntensity: 1.1, flatShading: true });
+// tank — dark armoured plates
+const tankFuzz = mat(0x4a5b34, { flatShading: true, roughness: 0.8, metalness: 0.3 });
+const tankPlate = mat(0x30362a, { flatShading: true, roughness: 0.6, metalness: 0.4 });
+// splitter — pale, bulbous
+const splitFuzz = mat(0xccd894, { flatShading: true, roughness: 1 });
+
+const flashShellMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+
+// Per-kind tuning knobs for the shared bee builder.
+const KIND = {
+  grunt: { s: 1.15, fuzz: beeFuzz, stripe: beeStripe, head: beeHead },
+  rusher: { s: 1.0, fuzz: rushFuzz, stripe: rushStripe, head: rushFuzz, lean: 0.5, wing: 1.3 },
+  spitter: { s: 1.3, fuzz: spitFuzz, stripe: spitFuzz, head: spitFuzz, fat: 1.5, sac: true },
+  tank: { s: 1.95, fuzz: tankFuzz, stripe: tankPlate, head: tankFuzz, fat: 1.35, armour: true, wing: 0.6 },
+  splitter: { s: 1.3, fuzz: splitFuzz, stripe: splitFuzz, head: splitFuzz, fat: 1.45 },
+  mini: { s: 0.7, fuzz: splitFuzz, stripe: splitFuzz, head: splitFuzz },
+  boss: { s: 3.0, fuzz: bossFuzz, stripe: bossStripe, head: bossFuzz, armour: true },
+};
+
+export function makeZombee(kind = "grunt") {
+  const k = KIND[kind] || KIND.grunt;
+  const boss = kind === "boss";
   const g = new THREE.Group();
-  const s = boss ? 3.0 : 1.15;
-  const fuzz = boss ? bossFuzz : beeFuzz;
-  const stripe = boss ? bossStripe : beeStripe;
+  const s = k.s;
+  const fat = k.fat || 1;
   const eyeM = boss ? bossEye : beeEye;
 
   // thorax
-  const thorax = new THREE.Mesh(LOWSPHERE, fuzz);
-  thorax.scale.setScalar(0.45 * s);
-  thorax.position.set(0, 0, 0);
+  const thorax = new THREE.Mesh(LOWSPHERE, k.fuzz);
+  thorax.scale.setScalar(0.45 * s * (k.fat ? 1.15 : 1));
   g.add(thorax);
 
   // striped abdomen trailing behind (-Z)
   for (let i = 0; i < 3; i++) {
-    const seg = new THREE.Mesh(LOWSPHERE, i % 2 === 0 ? stripe : beeDark);
-    const r = (0.42 - i * 0.07) * s;
+    const seg = new THREE.Mesh(LOWSPHERE, i % 2 === 0 ? k.stripe : beeDark);
+    const r = (0.42 - i * 0.07) * s * fat;
     seg.scale.set(r, r, r * 1.15);
     seg.position.set(0, -0.02 * s, -(0.42 + i * 0.34) * s);
     g.add(seg);
   }
+
+  // spitter venom sac
+  if (k.sac) {
+    const sac = new THREE.Mesh(LOWSPHERE, spitSac);
+    sac.scale.setScalar(0.34 * s);
+    sac.position.set(0, 0.12 * s, -0.7 * s);
+    g.add(sac);
+  }
+
   // stinger
   const stinger = new THREE.Mesh(CONE, beeDark);
   stinger.scale.set(0.12 * s, 0.4 * s, 0.12 * s);
@@ -244,7 +278,7 @@ export function makeZombee(boss = false) {
   g.add(stinger);
 
   // head (faces +Z, toward the player)
-  const head = new THREE.Mesh(LOWSPHERE, boss ? bossFuzz : beeHead);
+  const head = new THREE.Mesh(LOWSPHERE, k.head);
   head.scale.setScalar(0.34 * s);
   head.position.set(0, 0.05 * s, 0.5 * s);
   g.add(head);
@@ -255,7 +289,6 @@ export function makeZombee(boss = false) {
     eye.position.set(dir * 0.16 * s, 0.1 * s, 0.72 * s);
     g.add(eye);
 
-    // antenna
     const ant = new THREE.Mesh(CYL, beeDark);
     ant.scale.set(0.02 * s, 0.34 * s, 0.02 * s);
     ant.position.set(dir * 0.12 * s, 0.32 * s, 0.6 * s);
@@ -265,9 +298,10 @@ export function makeZombee(boss = false) {
 
   // wings
   const wings = [];
+  const wingScale = k.wing || 1;
   for (const dir of [-1, 1]) {
     const wing = new THREE.Mesh(SPHERE, wingMat);
-    wing.scale.set(0.62 * s, 0.05 * s, 0.42 * s);
+    wing.scale.set(0.62 * s * wingScale, 0.05 * s, 0.42 * s * wingScale);
     wing.position.set(dir * 0.5 * s, 0.42 * s, -0.05 * s);
     wing.userData.dir = dir;
     g.add(wing);
@@ -285,27 +319,44 @@ export function makeZombee(boss = false) {
     }
   }
 
-  if (boss) {
-    // back spikes + crown
-    for (let i = 0; i < 5; i++) {
-      const spike = new THREE.Mesh(CONE, beeDark);
-      spike.scale.set(0.12 * s, 0.5 * s, 0.12 * s);
-      spike.position.set(0, 0.4 * s, -(0.2 + i * 0.3) * s);
-      spike.rotation.x = -0.3;
-      g.add(spike);
+  // armour plates (tank + boss)
+  if (k.armour) {
+    const plateN = boss ? 5 : 3;
+    for (let i = 0; i < plateN; i++) {
+      const plate = new THREE.Mesh(boss ? CONE : BOX, boss ? beeDark : tankPlate);
+      if (boss) {
+        plate.scale.set(0.12 * s, 0.5 * s, 0.12 * s);
+        plate.position.set(0, 0.4 * s, -(0.2 + i * 0.3) * s);
+        plate.rotation.x = -0.3;
+      } else {
+        plate.scale.set(0.5 * s, 0.16 * s, 0.34 * s);
+        plate.position.set(0, 0.34 * s, -(0.1 + i * 0.34) * s);
+        plate.rotation.x = -0.2;
+      }
+      g.add(plate);
     }
-    for (const dir of [-1, 1]) {
-      const horn = new THREE.Mesh(CONE, beeDark);
-      horn.scale.set(0.09 * s, 0.5 * s, 0.09 * s);
-      horn.position.set(dir * 0.22 * s, 0.4 * s, 0.5 * s);
-      horn.rotation.set(-0.4, 0, dir * 0.5);
-      g.add(horn);
+    if (boss) {
+      for (const dir of [-1, 1]) {
+        const horn = new THREE.Mesh(CONE, beeDark);
+        horn.scale.set(0.09 * s, 0.5 * s, 0.09 * s);
+        horn.position.set(dir * 0.22 * s, 0.4 * s, 0.5 * s);
+        horn.rotation.set(-0.4, 0, dir * 0.5);
+        g.add(horn);
+      }
     }
   }
 
-  const hoverBase = boss ? 1.4 : 0.55;
+  if (k.lean) g.rotation.x = k.lean * 0.12;
+
+  // white flash shell for hit feedback (hidden until struck)
+  const flashShell = new THREE.Mesh(LOWSPHERE, flashShellMat);
+  flashShell.scale.setScalar(0.5 * s * fat);
+  flashShell.visible = false;
+  g.add(flashShell);
+
+  const hoverBase = boss ? 1.4 : kind === "tank" ? 0.4 : kind === "mini" ? 0.4 : 0.55;
   g.position.y = hoverBase;
-  g.userData = { wings, hoverBase, s };
+  g.userData = { wings, hoverBase, s, flashShell, kind };
   return g;
 }
 
